@@ -2,11 +2,18 @@
   session_start();
   try{
     $dsn = 'mysql:host=localhost;dbname=invoice_manager';
-    $db = new PDO($dsn, 'root', 'root');
+    $options = [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_EMULATE_PREPARES => false,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci"
+    ];
+    $db = new PDO($dsn, 'root', 'root', $options);
 
     // Get statuses (needed for both logged in and non-logged in states)
-    $statuses_result = $db->query("SELECT * FROM statuses");
-    $statuses = $statuses_result->fetchAll(PDO::FETCH_ASSOC);
+    $statuses_stmt = $db->prepare("SELECT * FROM statuses");
+    $statuses_stmt->execute();
+    $statuses = $statuses_stmt->fetchAll(PDO::FETCH_ASSOC);
 
     // Only fetch invoices if user is logged in
     $invoices = [];
