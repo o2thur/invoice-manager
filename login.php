@@ -1,7 +1,6 @@
 <?php
 require_once 'data.php';
 require_once 'functions.php';
-session_start();
 
 // Check if user is already logged in
 if (isset($_SESSION['loggedin']) && $_SESSION['loggedin'] === true) {
@@ -39,9 +38,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $hashed_password = $row['password'];
                         
                         if (password_verify($password, $hashed_password)) {
-                            // Password is correct, start a new session
-                            session_start();
-                            
                             // Store data in session variables
                             $_SESSION['loggedin'] = true;
                             $_SESSION['id'] = $id;
