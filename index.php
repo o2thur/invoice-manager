@@ -1,6 +1,7 @@
 <?php
     require "data.php";
-    require "functions.php";
+    require_once 'functions.php';
+    check_login();
 
     $status = array_map(function($status) {
         return $status['status'];
@@ -26,9 +27,15 @@
 <body>
     <main class="container my-4">
         <nav class="mb-3">
-            <div id="infoContainer">
-                <h1>Invoice Manager</h1>
-                <p>There are <?php echo count($invoices) ?> invoices</p>
+            <div id="infoContainer" class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1>Invoice Manager</h1>
+                    <p>There are <?php echo count($invoices) ?> invoices</p>
+                </div>
+                <div class="d-flex align-items-center">
+                    <span class="me-3">Welcome, <?php echo htmlspecialchars($_SESSION['username']); ?></span>
+                    <a href="logout.php" class="btn btn-outline-danger">Logout</a>
+                </div>
             </div>
             <ul class="nav">
                 <li class="nav-item">

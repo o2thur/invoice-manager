@@ -1,6 +1,7 @@
 <?php
     require 'data.php';
     require 'functions.php';
+    check_login();
 
     if($_SERVER['REQUEST_METHOD'] === 'POST'){
         $invoice = sanitize($_POST);
@@ -12,15 +13,26 @@
     } 
 
     if(isset($_GET['number'])){
-        $invoice = current(array_filter($invoices, function($invoice){
-            return $invoice['number'] == $_GET['number'];
-        }));
-
-        if(!$invoice){
-            header("Location: index.php");
+        $check_sql = "SELECT invoices.*, statuses.status 
+                      FROM invoices 
+                      JOIN statuses ON invoices.status_id = statuses.id 
+                      WHERE invoices.number = :number AND invoices.user_id = :user_id";
+        $check_stmt = $db->prepare($check_sql);
+        $check_stmt->execute([
+            ':number' => $_GET['number'],
+            ':user_id' => $_SESSION['id']
+        ]);
+        
+        if ($check_stmt->rowCount() === 0) {
+            // Invoice doesn't exist or doesn't belong to user
+            header('Location: index.php');
+            exit;
         }
+        
+        $invoice = $check_stmt->fetch(PDO::FETCH_ASSOC);
     } else {
-        header("Location:index.php");
+        header('Location: index.php');
+        exit;
     }
 
 ?>
