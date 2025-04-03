@@ -43,9 +43,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->bindParam(':password', $hashed_password, PDO::PARAM_STR);
             
             if ($stmt->execute()) {
-                // Registration successful, redirect to login page
-                header('Location: login.php?registered=true');
-                exit;
+                // Get the new user's ID
+                $user_id = $db->lastInsertId();
+                
+                // Assign default 'user' role
+                $role_sql = "INSERT INTO user_roles (user_id, role_id) 
+                            SELECT :user_id, r.id 
+                            FROM roles r 
+                            WHERE r.role_name = 'user'";
+                $role_stmt = $db->prepare($role_sql);
+                $role_stmt->bindParam(':user_id', $user_id, PDO::PARAM_INT);
+                
+                if ($role_stmt->execute()) {
+                    // Registration successful, redirect to login page
+                    header('Location: login.php?registered=true');
+                    exit;
+                } else {
+                    // If role assignment fails, delete the user and show error
+                    $delete_sql = "DELETE FROM users WHERE id = :user_id";
+                    $delete_stmt = $db->prepare($delete_sql);
+                    $delete_stmt->bindParam(':user_id', $user_id, PDO::PARAM_INT);
+                    $delete_stmt->execute();
+                    
+                    $error = 'Something went wrong. Please try again later.';
+                }
             } else {
                 $error = 'Something went wrong. Please try again later.';
             }

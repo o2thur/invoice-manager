@@ -7,6 +7,11 @@ function check_login() {
         header('Location: login.php');
         exit;
     }
+    
+    // Load user permissions if not already loaded
+    if (!isset($_SESSION['permissions'])) {
+        $_SESSION['permissions'] = getUserPermissions($_SESSION['id']);
+    }
 }
 
 function sanitize($data)
@@ -134,9 +139,17 @@ function logAudit($action_type, $table_name, $record_id, $old_value = null, $new
 function updateInvoice($invoice)
 {
     global $db, $statuses;
-
-    // Get the old invoice data for audit
+    
+    check_permission('invoice_update');
+    
+    // Get the old invoice data for audit and permission check
     $old_invoice = getInvoice($invoice['number']);
+    
+    // Check if user has permission to update this specific invoice
+    if (!$old_invoice || (!hasPermission('invoice_read_all') && $old_invoice['user_id'] != $_SESSION['id'])) {
+        http_response_code(403);
+        die('Access Denied: You do not have permission to update this invoice');
+    }
 
     $status_id = null;
     foreach ($statuses as $status) {
@@ -175,7 +188,9 @@ function updateInvoice($invoice)
 function addInvoice($invoice)
 {
     global $db, $statuses;
-
+    
+    check_permission('invoice_create');
+    
     $status_id = null;
 
     foreach ($statuses as $status) {
@@ -247,17 +262,26 @@ function getInvoice($number)
         return null;
     }
     
+    check_permission('invoice_read');
+    
     $sql = "SELECT invoices.*, statuses.status 
             FROM invoices 
             JOIN statuses ON invoices.status_id = statuses.id 
-            WHERE invoices.number = :number 
-            AND invoices.user_id = :user_id";
+            WHERE invoices.number = :number";
+            
+    // Add row-level security check
+    if (!hasPermission('invoice_read_all')) {
+        $sql .= " AND invoices.user_id = :user_id";
+    }
             
     $stmt = $db->prepare($sql);
-    $stmt->execute([
-        ':number' => $number,
-        ':user_id' => $_SESSION['id']
-    ]);
+    $params = [':number' => $number];
+    
+    if (!hasPermission('invoice_read_all')) {
+        $params[':user_id'] = $_SESSION['id'];
+    }
+    
+    $stmt->execute($params);
     
     return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
 }
@@ -266,9 +290,17 @@ function deleteInvoice($number)
 {
     global $db;
     
+    check_permission('invoice_delete');
+    
     try {
-        // Get the invoice data before deletion for audit
+        // Get the invoice data before deletion for audit and permission check
         $old_invoice = getInvoice($number);
+        
+        // Check if user has permission to delete this specific invoice
+        if (!$old_invoice || (!hasPermission('invoice_read_all') && $old_invoice['user_id'] != $_SESSION['id'])) {
+            http_response_code(403);
+            die('Access Denied: You do not have permission to delete this invoice');
+        }
         
         if ($old_invoice) {
             $sql = "DELETE FROM invoices WHERE number = :number AND user_id = :user_id";
@@ -294,5 +326,39 @@ function deleteInvoice($number)
         return false;
     } catch (PDOException $e) {
         return false;
+    }
+}
+
+function getUserPermissions($user_id) {
+    global $db;
+    
+    $sql = "SELECT DISTINCT p.permission_name
+            FROM permissions p
+            JOIN role_permissions rp ON p.id = rp.permission_id
+            JOIN user_roles ur ON rp.role_id = ur.role_id
+            WHERE ur.user_id = :user_id";
+            
+    $stmt = $db->prepare($sql);
+    $stmt->execute([':user_id' => $user_id]);
+    
+    return $stmt->fetchAll(PDO::FETCH_COLUMN);
+}
+
+function hasPermission($permission) {
+    if (!isset($_SESSION['id'])) {
+        return false;
+    }
+    
+    if (!isset($_SESSION['permissions'])) {
+        $_SESSION['permissions'] = getUserPermissions($_SESSION['id']);
+    }
+    
+    return in_array($permission, $_SESSION['permissions']);
+}
+
+function check_permission($permission) {
+    if (!hasPermission($permission)) {
+        http_response_code(403);
+        die('Access Denied: Insufficient permissions');
     }
 }
