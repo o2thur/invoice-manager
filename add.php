@@ -1,18 +1,27 @@
 <?php
     require "data.php";
     require "functions.php";
+    
+    // Check if the user is logged in
+    check_login();
 
     if($_SERVER['REQUEST_METHOD'] === 'POST'){
+        // Verify CSRF token if implemented
+        // if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+        //     die("CSRF attack detected");
+        // }
+        
         $invoice = sanitize($_POST);
         $errors = validate($invoice);
 
         if(count($errors) === 0){
-            addInvoice($invoice);
-            // if($_FILES['file']['error'] === UPLOAD_ERR_OK){
-            //     $name = $_FILES['image']['name'];
-            //     $file = $_FILES['image']['tmp_name'];
-            //     $dest = __DIR__ . '/documents/' . 
-            // }
+            try {
+                // Only process if validation passed
+                addInvoice($invoice);
+            } catch (Exception $e) {
+                error_log("Error adding invoice: " . $e->getMessage());
+                $errors['system'] = "An error occurred while processing your request. Please try again later.";
+            }
         }
     }
 ;?>

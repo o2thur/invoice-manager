@@ -3,28 +3,43 @@
     require 'functions.php';
     check_login();
 
+    $invoice = [];
+    $errors = [];
+
     if($_SERVER['REQUEST_METHOD'] === 'POST'){
+        // Verify CSRF token if implemented
+        // if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+        //     die("CSRF attack detected");
+        // }
+        
         $invoice = sanitize($_POST);
         $errors = validate($invoice);
 
         if(count($errors) === 0){
-            updateInvoice($invoice);
+            try {
+                updateInvoice($invoice);
+            } catch (Exception $e) {
+                error_log("Error updating invoice: " . $e->getMessage());
+                $errors['system'] = "An error occurred while processing your request. Please try again later.";
+            }
         }
     } 
 
     if(isset($_GET['number'])){
+        $invoice_number = htmlspecialchars(trim($_GET['number']), ENT_QUOTES, 'UTF-8');
+        
         $check_sql = "SELECT invoices.*, statuses.status 
                       FROM invoices 
                       JOIN statuses ON invoices.status_id = statuses.id 
                       WHERE invoices.number = :number AND invoices.user_id = :user_id";
         $check_stmt = $db->prepare($check_sql);
         $check_stmt->execute([
-            ':number' => $_GET['number'],
+            ':number' => $invoice_number,
             ':user_id' => $_SESSION['id']
         ]);
         
         if ($check_stmt->rowCount() === 0) {
-            // Invoice doesn't exist or doesn't belong to user
+            $_SESSION['error_message'] = "Invoice not found or you don't have permission to edit it.";
             header('Location: index.php');
             exit;
         }

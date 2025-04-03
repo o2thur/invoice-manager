@@ -12,7 +12,13 @@ function check_login() {
 function sanitize($data)
 {
     return array_map(function ($value) {
-        return htmlspecialchars(stripslashes(trim($value)));
+        if (is_string($value)) {
+            $value = trim($value);
+            $value = stripslashes($value);
+            $value = htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+            return $value;
+        }
+        return $value;
     }, $data);
 }
 
@@ -66,15 +72,28 @@ function validate($invoice)
 
 function saveFile($invoice_number)
 {
-
     $file = $_FILES['file'];
 
     if ($file['error'] === UPLOAD_ERR_OK) {
-        $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
-        $filename = $invoice_number . "." . $ext;
+        $allowed_extensions = ['pdf'];
+        $max_file_size = 5 * 1024 * 1024; 
+        
+        $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        
+        if (!in_array($ext, $allowed_extensions)) {
+            return false;
+        }
+        
+        if ($file['size'] > $max_file_size) {
+            return false;
+        }
+        
+        $filename = preg_replace('/[^a-zA-Z0-9_-]/', '', $invoice_number) . "." . $ext;
 
         if (!file_exists('documents/')) {
-            mkdir('documents/');
+            if (!mkdir('documents/', 0755, true)) {
+                return false;
+            }
         }
 
         $dest = "documents/" . $filename;
@@ -188,19 +207,57 @@ function createInvoiceNumber($length = 5)
 
 function getInvoice($number)
 {
-    global $invoices;
-
-    return $invoice = current(array_filter($invoices, function ($invoice) {
-        return $invoice['number'] == $_GET['number'];
-    }));
+    global $db;
+    
+    if (!isset($_SESSION['id'])) {
+        return null;
+    }
+    
+    $sql = "SELECT invoices.*, statuses.status 
+            FROM invoices 
+            JOIN statuses ON invoices.status_id = statuses.id 
+            WHERE invoices.number = :number 
+            AND invoices.user_id = :user_id";
+            
+    $stmt = $db->prepare($sql);
+    $stmt->execute([
+        ':number' => $number,
+        ':user_id' => $_SESSION['id']
+    ]);
+    
+    return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
 }
 
 function deleteInvoice($number)
 {
-    global $db, $invoices;
-
-    $sql = "DELETE FROM invoices where number = :number";
-    $stmt = $db->prepare($sql);
-    $stmt->bindValue(':number', $number);
-    $stmt->execute();
+    global $db;
+    
+    try {
+        $check_sql = "SELECT id FROM invoices WHERE number = :number AND user_id = :user_id";
+        $check_stmt = $db->prepare($check_sql);
+        $check_stmt->execute([
+            ':number' => $number,
+            ':user_id' => $_SESSION['id']
+        ]);
+        
+        if ($check_stmt->rowCount() > 0) {
+            $sql = "DELETE FROM invoices WHERE number = :number AND user_id = :user_id";
+            $stmt = $db->prepare($sql);
+            $result = $stmt->execute([
+                ':number' => $number,
+                ':user_id' => $_SESSION['id']
+            ]);
+            
+            $pdf_file = "documents/" . $number . ".pdf";
+            if (file_exists($pdf_file)) {
+                unlink($pdf_file);
+            }
+            
+            return $result;
+        }
+        return false;
+    } catch (PDOException $e) {
+        error_log("Error deleting invoice: " . $e->getMessage());
+        return false;
+    }
 }

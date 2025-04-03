@@ -29,8 +29,13 @@
     }
 
   } catch (PDOException $e) {
-    print "Error!: " . $e->getMessage() . "</br>";
-    exit();
+    // Log the error but don't expose details to the user
+    error_log("Database Error: " . $e->getMessage());
+    // Display generic error message
+    $error_message = "A database error occurred. Please try again later or contact support.";
+    // Optionally redirect to an error page
+    // header('Location: error.php');
+    // exit();
   }
 
   // $statuses = [
