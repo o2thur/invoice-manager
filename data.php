@@ -1,4 +1,19 @@
 <?php 
+  // Set secure session cookie parameters
+  ini_set('session.cookie_httponly', 1);
+  ini_set('session.cookie_secure', 1);
+  ini_set('session.use_only_cookies', 1);
+  
+  // Set session cookie parameters
+  session_set_cookie_params([
+    'lifetime' => 0,
+    'path' => '/',
+    'domain' => '',
+    'secure' => true,
+    'httponly' => true,
+    'samesite' => 'Strict'
+  ]);
+
   session_start();
   try{
     $dsn = 'mysql:host=localhost;dbname=invoice_manager';
