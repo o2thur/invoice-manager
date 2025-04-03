@@ -359,6 +359,6 @@ function hasPermission($permission) {
 function check_permission($permission) {
     if (!hasPermission($permission)) {
         http_response_code(403);
-        die('Access Denied: Insufficient permissions');
+        header('Location: index.php');
     }
 }
