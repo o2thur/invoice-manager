@@ -59,18 +59,18 @@
                 <form method="post" enctype="multipart/form-data">
                     <div class="form-group mb-3">
                         <label for="client">Client name:</label>
-                        <input type="text" id="client" name="client" class="form-control" value="<?php echo $invoice['client'] ?? ''; ?>">
-                        <div class="error text-danger"><?php echo $errors['client'] ?? '' ;?></div>
+                        <input type="text" id="client" name="client" class="form-control" value="<?php echo htmlspecialchars($invoice['client'] ?? ''); ?>">
+                        <div class="error text-danger"><?php echo htmlspecialchars($errors['client'] ?? ''); ?></div>
                     </div>
                     <div class="form-group mb-3">
                         <label for="email">Client email:</label>
-                        <input type="text" id="email" name="email" class="form-control" value="<?php echo $invoice['email'] ?? ''; ?>">
-                        <div class="error text-danger"><?php echo $errors['email'] ?? '' ;?></div>
+                        <input type="text" id="email" name="email" class="form-control" value="<?php echo htmlspecialchars($invoice['email'] ?? ''); ?>">
+                        <div class="error text-danger"><?php echo htmlspecialchars($errors['email'] ?? ''); ?></div>
                     </div>
                     <div class="form-group mb-3">
                         <label for="amount">Invoice Amount:</label>
-                        <input type="number" id="amount" name="amount" class="form-control" value="<?php echo $invoice['amount'] ?? ''; ?>">
-                        <div class="error text-danger"><?php echo $errors['amount'] ?? '' ;?></div>
+                        <input type="number" id="amount" name="amount" class="form-control" value="<?php echo htmlspecialchars($invoice['amount'] ?? ''); ?>">
+                        <div class="error text-danger"><?php echo htmlspecialchars($errors['amount'] ?? ''); ?></div>
                     </div>
                     <div class="form-group mb-3">
                         <label for="status">Invoice Status:</label>
@@ -79,7 +79,7 @@
                             <option value="pending">Pending</option>
                             <option value="paid">Paid</option>
                         </select>
-                        <div class="error text-danger"><?php echo $errors['status'] ?? '' ;?></div>
+                        <div class="error text-danger"><?php echo htmlspecialchars($errors['status'] ?? ''); ?></div>
                     </div>
                     <div class="form-group mb-3">
                         <input type="file" name="file" id="" accept=".pdf">

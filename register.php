@@ -109,7 +109,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="register-container">
         <h2>Register</h2>
         <?php if (!empty($error)): ?>
-            <div class="error"><?php echo $error; ?></div>
+            <div class="error"><?php echo htmlspecialchars($error); ?></div>
         <?php endif; ?>
         
         <form action="<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>" method="post">
