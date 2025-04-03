@@ -108,9 +108,35 @@ function saveFile($invoice_number)
     return false;
 }
 
+function logAudit($action_type, $table_name, $record_id, $old_value = null, $new_value = null) {
+    global $db;
+    
+    $user_id = isset($_SESSION['id']) ? $_SESSION['id'] : null;
+    $ip_address = $_SERVER['REMOTE_ADDR'] ?? null;
+    $user_agent = $_SERVER['HTTP_USER_AGENT'] ?? null;
+    
+    $sql = "INSERT INTO audit_logs (user_id, action_type, table_name, record_id, old_value, new_value, ip_address, user_agent)
+            VALUES (:user_id, :action_type, :table_name, :record_id, :old_value, :new_value, :ip_address, :user_agent)";
+            
+    $stmt = $db->prepare($sql);
+    $stmt->execute([
+        ':user_id' => $user_id,
+        ':action_type' => $action_type,
+        ':table_name' => $table_name,
+        ':record_id' => $record_id,
+        ':old_value' => $old_value ? json_encode($old_value) : null,
+        ':new_value' => $new_value ? json_encode($new_value) : null,
+        ':ip_address' => $ip_address,
+        ':user_agent' => $user_agent
+    ]);
+}
+
 function updateInvoice($invoice)
 {
     global $db, $statuses;
+
+    // Get the old invoice data for audit
+    $old_invoice = getInvoice($invoice['number']);
 
     $status_id = null;
     foreach ($statuses as $status) {
@@ -138,6 +164,8 @@ function updateInvoice($invoice)
         ':status_id' => $status_id,
     ]);
 
+    // Log the update
+    logAudit('UPDATE', 'invoices', $old_invoice['id'], $old_invoice, $new);
 
     saveFile($new['number']);
 
@@ -177,6 +205,12 @@ function addInvoice($invoice)
         ':status_id' => $status_id,
         ':user_id' => $newInvoice['user_id']
     ]);
+
+    // Get the newly inserted invoice ID
+    $new_invoice_id = $db->lastInsertId();
+    
+    // Log the insert
+    logAudit('INSERT', 'invoices', $new_invoice_id, null, $newInvoice);
 
     saveFile($newInvoice['number']);
 
@@ -233,14 +267,10 @@ function deleteInvoice($number)
     global $db;
     
     try {
-        $check_sql = "SELECT id FROM invoices WHERE number = :number AND user_id = :user_id";
-        $check_stmt = $db->prepare($check_sql);
-        $check_stmt->execute([
-            ':number' => $number,
-            ':user_id' => $_SESSION['id']
-        ]);
+        // Get the invoice data before deletion for audit
+        $old_invoice = getInvoice($number);
         
-        if ($check_stmt->rowCount() > 0) {
+        if ($old_invoice) {
             $sql = "DELETE FROM invoices WHERE number = :number AND user_id = :user_id";
             $stmt = $db->prepare($sql);
             $result = $stmt->execute([
@@ -248,16 +278,21 @@ function deleteInvoice($number)
                 ':user_id' => $_SESSION['id']
             ]);
             
-            $pdf_file = "documents/" . $number . ".pdf";
-            if (file_exists($pdf_file)) {
-                unlink($pdf_file);
+            if ($result) {
+                // Log the deletion
+                logAudit('DELETE', 'invoices', $old_invoice['id'], $old_invoice, null);
+                
+                // Delete associated file if it exists
+                $file_path = "documents/" . $number . ".pdf";
+                if (file_exists($file_path)) {
+                    unlink($file_path);
+                }
+                
+                return true;
             }
-            
-            return $result;
         }
         return false;
     } catch (PDOException $e) {
-        error_log("Error deleting invoice: " . $e->getMessage());
         return false;
     }
 }
