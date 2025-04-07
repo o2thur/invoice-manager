@@ -2,7 +2,6 @@
     require "data.php";
     require "functions.php";
     
-    // Check if the user is logged in
     check_login();
 
     if($_SERVER['REQUEST_METHOD'] === 'POST'){

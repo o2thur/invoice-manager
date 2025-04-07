@@ -2,11 +2,9 @@
 require_once 'data.php';
 require_once 'functions.php';
 
-// Check login and admin permission
 check_login();
 check_permission('user_manage');
 
-// Handle user deletion
 if (isset($_POST['delete_user']) && isset($_POST['user_id'])) {
     $user_id = (int)$_POST['user_id'];
     if ($user_id !== 1) { // Prevent deleting the main admin
@@ -16,7 +14,6 @@ if (isset($_POST['delete_user']) && isset($_POST['user_id'])) {
     }
 }
 
-// Get all users
 $sql = "SELECT u.id, u.username, GROUP_CONCAT(r.role_name) as roles
         FROM users u
         LEFT JOIN user_roles ur ON u.id = ur.user_id
@@ -27,7 +24,6 @@ $stmt = $db->prepare($sql);
 $stmt->execute();
 $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Get all invoices
 $sql = "SELECT i.*, s.status, u.username as created_by
         FROM invoices i
         JOIN statuses s ON i.status_id = s.id

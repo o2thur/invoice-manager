@@ -142,10 +142,8 @@ function updateInvoice($invoice)
     
     check_permission('invoice_update');
     
-    // Get the old invoice data for audit and permission check
     $old_invoice = getInvoice($invoice['number']);
     
-    // Check if user has permission to update this specific invoice
     if (!$old_invoice || (!hasPermission('invoice_read_all') && $old_invoice['user_id'] != $_SESSION['id'])) {
         http_response_code(403);
         die('Access Denied: You do not have permission to update this invoice');
@@ -177,7 +175,6 @@ function updateInvoice($invoice)
         ':status_id' => $status_id,
     ]);
 
-    // Log the update
     logAudit('UPDATE', 'invoices', $old_invoice['id'], $old_invoice, $new);
 
     saveFile($new['number']);
@@ -221,10 +218,8 @@ function addInvoice($invoice)
         ':user_id' => $newInvoice['user_id']
     ]);
 
-    // Get the newly inserted invoice ID
     $new_invoice_id = $db->lastInsertId();
     
-    // Log the insert
     logAudit('INSERT', 'invoices', $new_invoice_id, null, $newInvoice);
 
     saveFile($newInvoice['number']);
@@ -269,7 +264,6 @@ function getInvoice($number)
             JOIN statuses ON invoices.status_id = statuses.id 
             WHERE invoices.number = :number";
             
-    // Add row-level security check
     if (!hasPermission('invoice_read_all')) {
         $sql .= " AND invoices.user_id = :user_id";
     }
@@ -293,10 +287,8 @@ function deleteInvoice($number)
     check_permission('invoice_delete');
     
     try {
-        // Get the invoice data before deletion for audit and permission check
         $old_invoice = getInvoice($number);
         
-        // Check if user has permission to delete this specific invoice
         if (!$old_invoice || (!hasPermission('invoice_read_all') && $old_invoice['user_id'] != $_SESSION['id'])) {
             http_response_code(403);
             die('Access Denied: You do not have permission to delete this invoice');
@@ -311,10 +303,8 @@ function deleteInvoice($number)
             ]);
             
             if ($result) {
-                // Log the deletion
                 logAudit('DELETE', 'invoices', $old_invoice['id'], $old_invoice, null);
                 
-                // Delete associated file if it exists
                 $file_path = "documents/" . $number . ".pdf";
                 if (file_exists($file_path)) {
                     unlink($file_path);

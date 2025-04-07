@@ -11,7 +11,6 @@ if (isset($_SESSION['loggedin']) && $_SESSION['loggedin'] === true) {
 
 $error = '';
 
-// Process registration form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim($_POST['username'] ?? '');
     $password = trim($_POST['password'] ?? '');
@@ -24,7 +23,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($password !== $confirm_password) {
         $error = 'Passwords do not match.';
     } else {
-        // Check if username exists
         $sql = "SELECT id FROM users WHERE username = :username";
         $stmt = $db->prepare($sql);
         $stmt->bindParam(':username', $username, PDO::PARAM_STR);
@@ -33,7 +31,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($stmt->rowCount() > 0) {
             $error = 'This username is already taken.';
         } else {
-            // Create new user
             $sql = "INSERT INTO users (username, password) VALUES (:username, :password)";
             $stmt = $db->prepare($sql);
             
@@ -43,10 +40,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->bindParam(':password', $hashed_password, PDO::PARAM_STR);
             
             if ($stmt->execute()) {
-                // Get the new user's ID
                 $user_id = $db->lastInsertId();
                 
-                // Assign default 'user' role
                 $role_sql = "INSERT INTO user_roles (user_id, role_id) 
                             SELECT :user_id, r.id 
                             FROM roles r 
@@ -55,11 +50,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $role_stmt->bindParam(':user_id', $user_id, PDO::PARAM_INT);
                 
                 if ($role_stmt->execute()) {
-                    // Registration successful, redirect to login page
                     header('Location: login.php?registered=true');
                     exit;
                 } else {
-                    // If role assignment fails, delete the user and show error
                     $delete_sql = "DELETE FROM users WHERE id = :user_id";
                     $delete_stmt = $db->prepare($delete_sql);
                     $delete_stmt->bindParam(':user_id', $user_id, PDO::PARAM_INT);

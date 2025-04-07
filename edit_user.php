@@ -2,30 +2,24 @@
 require_once 'data.php';
 require_once 'functions.php';
 
-// Check login and admin permission
 check_login();
 check_permission('user_manage');
 
 $error = '';
 $success = '';
 
-// Get user ID from URL
 $user_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
-// Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_roles'])) {
     $selected_roles = $_POST['roles'] ?? [];
     
     try {
-        // Start transaction
         $db->beginTransaction();
         
-        // Delete existing roles
         $delete_sql = "DELETE FROM user_roles WHERE user_id = :user_id";
         $delete_stmt = $db->prepare($delete_sql);
         $delete_stmt->execute([':user_id' => $user_id]);
         
-        // Insert new roles
         if (!empty($selected_roles)) {
             $insert_sql = "INSERT INTO user_roles (user_id, role_id) VALUES (:user_id, :role_id)";
             $insert_stmt = $db->prepare($insert_sql);
@@ -46,7 +40,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_roles'])) {
     }
 }
 
-// Get user details
 $user_sql = "SELECT id, username FROM users WHERE id = :user_id";
 $user_stmt = $db->prepare($user_sql);
 $user_stmt->execute([':user_id' => $user_id]);
@@ -57,7 +50,6 @@ if (!$user) {
     exit;
 }
 
-// Get all roles
 $roles_sql = "SELECT r.*, CASE WHEN ur.user_id IS NOT NULL THEN 1 ELSE 0 END as is_selected
               FROM roles r
               LEFT JOIN user_roles ur ON r.id = ur.role_id AND ur.user_id = :user_id

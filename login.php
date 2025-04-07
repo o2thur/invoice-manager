@@ -2,7 +2,6 @@
 require_once 'data.php';
 require_once 'functions.php';
 
-// Check if user is already logged in
 if (isset($_SESSION['loggedin']) && $_SESSION['loggedin'] === true) {
     header('Location: index.php');
     exit;
@@ -11,12 +10,10 @@ if (isset($_SESSION['loggedin']) && $_SESSION['loggedin'] === true) {
 $error = '';
 $success = '';
 
-// Check if user just registered
 if (isset($_GET['registered']) && $_GET['registered'] === 'true') {
     $success = 'Registration successful! Please login with your credentials.';
 }
 
-// Process login form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim($_POST['username'] ?? '');
     $password = trim($_POST['password'] ?? '');
@@ -24,7 +21,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($username) || empty($password)) {
         $error = 'Please enter both username and password.';
     } else {
-        // Prepare a select statement
         $sql = "SELECT id, username, password FROM users WHERE username = :username";
         
         if ($stmt = $db->prepare($sql)) {
@@ -38,12 +34,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $hashed_password = $row['password'];
                         
                         if (password_verify($password, $hashed_password)) {
-                            // Store data in session variables
                             $_SESSION['loggedin'] = true;
                             $_SESSION['id'] = $id;
                             $_SESSION['username'] = $username;
                             
-                            // Redirect user to index page
                             header('Location: index.php');
                             exit;
                         } else {
